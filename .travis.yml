@@ -1,0 +1,19 @@
+language: bash
+
+script:
+  # Renaming all *.yaml files to *.template
+  - for f in $(find . -name "*.yaml"); do mv -- "$f" "${f%.yaml}.template"; done
+  # Deleting files other than templates
+  - find . -type f ! -name '*.template' -delete
+
+### Sending templates to S3
+deploy:
+  - provider: s3
+    on:
+      branch: master
+    # You can refer to environment variables from Travis repo settings!
+    access_key_id: $AWS_ACCESS_KEY_ID
+    secret_access_key: $AWS_SECRET_ACCESS_KEY
+    bucket: $S3_BUCKET
+    skip_cleanup: true
+    acl: public_read
