@@ -1,4 +1,4 @@
-# VeeamHub Repository Template
+# Veeam AWS CloudFormation Templates
 
 This repository contains sample AWS CloudFormation templates written for various Veeam use cases.
 
