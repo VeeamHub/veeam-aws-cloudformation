@@ -1,0 +1,92 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Creates a S3 bucket & IAM User to be used with Veeam Capacity Tier with Immutability disabled.
+
+Parameters:
+  BucketName:
+    Description: S3 bucket name (make sure bucket name doesn't already exist)
+    Type: String
+    MinLength: 3
+    MaxLength: 63
+    AllowedPattern: '[a-z0-9][a-z0-9\-]*'
+    ConstraintDescription: Must contain only letters, numbers, dashes and start with an alphanumeric character.
+  Username:
+    Default: veeam-s3-user
+    Description: IAM username
+    Type: String
+    MinLength: 1
+    MaxLength: 63
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9\-]*'
+    ConstraintDescription: Must contain only letters, numbers, dashes and start with an alpha character.
+
+Resources:
+  # S3 Bucket
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # IAM User
+  IAMUser:
+    Type: AWS::IAM::User
+    DependsOn:
+      - S3Bucket
+    Properties:
+      Path: /
+      UserName: !Ref Username
+      Policies:
+      - PolicyName: s3-veeam-access
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:PutObject
+            - s3:GetObject
+            - s3:DeleteObject
+            - s3:ListBucket
+            - s3:GetBucketLocation
+            - s3:GetBucketVersioning
+            - s3:GetBucketObjectLockConfiguration
+            Resource:
+            - !Sub arn:aws:s3:::${BucketName}/*
+            - !Sub arn:aws:s3:::${BucketName}
+          - Effect: Allow
+            Action:
+            - s3:ListAllMyBuckets
+            - s3:HeadBucket
+            Resource: '*'
+
+  # IAM Access Key
+  IAMAccessKey:
+    Type: AWS::IAM::AccessKey
+    DependsOn:
+    - IAMUser
+    Properties:
+      UserName: !Ref Username
+
+Outputs:
+  Region:
+    Value: !Ref AWS::Region
+    Description: AWS Region
+
+  User:
+    Value: !Ref IAMUser
+    Description: Newly created IAM user
+
+  AccessKey:
+    Value: !Ref IAMAccessKey
+    Description: AWS Access Key Id of new user
+
+  SecretKey:
+    Value: !GetAtt IAMAccessKey.SecretAccessKey
+    Description: AWS Secret Access Key of new user
+
+  S3Bucket:
+    Value: !Ref S3Bucket
+    Description: Newly created S3 bucket
