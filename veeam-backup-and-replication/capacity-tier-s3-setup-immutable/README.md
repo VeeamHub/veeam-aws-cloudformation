@@ -1,6 +1,6 @@
 # Capacity Tier S3 Setup with Immutability
 
-[Veeam Capacity Tier](https://helpcenter.veeam.com/docs/backup/vsphere/capacity_tier_how_it_works.html) expands the scale-out backup repository abilities and allows you to store backup data in cloud-based object storage or S3-Compatible on-premises storage.
+[Veeam Capacity Tier](https://helpcenter.veeam.com/docs/backup/vsphere/capacity_tier.html) expands the scale-out backup repository abilities and allows you to store backup data in cloud-based object storage or S3-Compatible on-premises storage.
 
 This CloudFormation Template deploys the required AWS constructs to add an object storage backup repository **with Immutability** to Veeam Backup & Replication. It performs the following actions:
 
