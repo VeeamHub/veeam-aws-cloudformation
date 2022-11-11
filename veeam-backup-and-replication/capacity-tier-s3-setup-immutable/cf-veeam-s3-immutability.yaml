@@ -58,7 +58,6 @@ Resources:
             - s3:GetObjectLegalHold
             - s3:GetObjectRetention
             - s3:GetObjectVersion
-            - s3:ListBucket
             - s3:ListBucketVersions
             - s3:PutObject
             - s3:PutObjectLegalHold
@@ -68,8 +67,8 @@ Resources:
             - !Sub arn:aws:s3:::${BucketName}
           - Effect: Allow
             Action:
-            - s3:HeadBucket
             - s3:ListAllMyBuckets
+            - s3:ListBucket
             Resource: '*'
 
   # IAM Access Key
