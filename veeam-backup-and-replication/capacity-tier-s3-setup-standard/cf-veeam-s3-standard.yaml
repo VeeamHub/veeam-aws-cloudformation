@@ -1,26 +1,24 @@
----
-AWSTemplateFormatVersion: '2010-09-09'
-Description: Creates a S3 bucket & IAM User to be used with Veeam Capacity Tier with Immutability disabled.
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Creates an S3 bucket and IAM user to be used with Veeam Capacity Tier. Object Lock is not enabled on the S3 bucket - Immutability Disabled.
 
 Parameters:
   BucketName:
-    Description: S3 bucket name (make sure bucket name doesn't already exist)
+    Description: Bucket name. Bucket names must be globally unique.
     Type: String
     MinLength: 3
     MaxLength: 63
     AllowedPattern: '[a-z0-9][a-z0-9\-]*'
-    ConstraintDescription: Must contain only letters, numbers, dashes and start with an alphanumeric character.
+    ConstraintDescription: Refer to AWS S3 documentation for name requirements and character limits. https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html
   Username:
     Default: veeam-s3-user
-    Description: IAM username
+    Description: IAM username.
     Type: String
     MinLength: 1
-    MaxLength: 63
+    MaxLength: 64
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9\-]*'
-    ConstraintDescription: Must contain only letters, numbers, dashes and start with an alpha character.
+    ConstraintDescription: Refer to AWS IAM documentation for name requirements and character limits. https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-quotas.html
 
 Resources:
-  # S3 Bucket
   S3Bucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -31,7 +29,6 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
 
-  # IAM User
   IAMUser:
     Type: AWS::IAM::User
     DependsOn:
@@ -40,34 +37,44 @@ Resources:
       Path: /
       UserName: !Ref Username
       Policies:
-      - PolicyName: s3-veeam-access
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-          - Effect: Allow
-            Action:
-            - s3:DeleteObject
-            - s3:GetBucketLocation
-            - s3:GetBucketObjectLockConfiguration
-            - s3:GetBucketVersioning
-            - s3:GetObject
-            - s3:PutObject
-            Resource:
-            - !Sub arn:aws:s3:::${BucketName}/*
-            - !Sub arn:aws:s3:::${BucketName}
-          - Effect: Allow
-            Action:
-            - s3:ListAllMyBuckets
-            - s3:ListBucket
-            Resource: '*'
+        - PolicyName: veeam-s3-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:DeleteObject
+                  - s3:GetBucketLocation
+                  - s3:GetBucketObjectLockConfiguration
+                  - s3:GetBucketVersioning
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:s3:::${BucketName}/*"
+                  - !Sub "arn:${AWS::Partition}:s3:::${BucketName}"
+              - Effect: Allow
+                Action:
+                  - s3:ListAllMyBuckets
+                  - s3:ListBucket
+                Resource: "*"
 
-  # IAM Access Key
   IAMAccessKey:
     Type: AWS::IAM::AccessKey
     DependsOn:
-    - IAMUser
+      - IAMUser
     Properties:
       UserName: !Ref Username
+
+  # Consider storing the IAM secret key in AWS Secrets Manager for secure storage and access.
+  # This option is not enabled by default because secrets stored in AWS Secrets Manager incur a monthly cost. Refer to AWS documentation for details.
+  # IAMSecretAccessKey:
+  #   Type: AWS::SecretsManager::Secret
+  #   UpdateReplacePolicy: Delete
+  #   DeletionPolicy: Delete
+  #   Properties:
+  #     Name: VeeamS3AccessKey
+  #     Description: Access key used by Veeam to access S3.
+  #     SecretString: !Sub '{"AccessKey":"${IAMAccessKey}","SecretAccessKey":"${IAMAccessKey.SecretAccessKey}"}'
 
 Outputs:
   Region:
@@ -76,16 +83,17 @@ Outputs:
 
   User:
     Value: !Ref IAMUser
-    Description: Newly created IAM user
+    Description: Veeam S3 IAM user
 
   AccessKey:
     Value: !Ref IAMAccessKey
-    Description: AWS Access Key Id of new user
+    Description: Access key ID of new user
 
+  # Remove the "SecretKey" output if you opt to use AWS Secrets Manager to store the secret key (more secure).
   SecretKey:
     Value: !GetAtt IAMAccessKey.SecretAccessKey
-    Description: AWS Secret Access Key of new user
+    Description: Secret access key of new user
 
   S3Bucket:
     Value: !Ref S3Bucket
-    Description: Newly created S3 bucket
+    Description: Veeam S3 bucket (object lock / immutability is not enabled)
