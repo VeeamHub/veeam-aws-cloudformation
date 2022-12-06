@@ -4,6 +4,8 @@ This project allows you to automatically add accounts managed by AWS Organizatio
 
 ## Getting Started
 
+![Diagram](veeam-aws-org-diagram.png)
+
 Before getting started, please review the [Prerequisites](#prerequisites) to ensure your environment is configured properly. Details [instructions](#instructions) are also available on this page.
 
 1) First, create the Lambda functions stack in the account where Veeam Backup for AWS is deployed (the _backup_ account). You can use the **Launch Stack** button below to do this.
@@ -131,7 +133,7 @@ For each role that you deploy to your organization, you must create two custom r
 1) **Custom::RandomExtIdGenerator** resource - Invokes the _RandomExtIdLambda_ function to create a unique external ID for a role created in the member account
 1) **Custom::VeeamAwsConfigurator** resource - Invokes the _VeeamConfiguratorLambda_ function to add the account to the Veeam Backup for AWS console
 
-The **Custom::VeeamAwsConfigurator** resource includes properties that give the Lambda function the data it needs to process them. If you create other roles and wish to have them added to the Veeam Backup for AWS console, be sure to include the properties specified in the _veeam-aws-org-roles_ template on the custom resources so the Lambda functions will have what they need.
+The **Custom::VeeamAwsConfigurator** resource includes properties that give the Lambda function the data it needs to process the roles. If you create other roles and wish to have them added to the Veeam Backup for AWS console, be sure to include the properties specified on the custom resources in the _veeam-aws-org-roles_ template so the Lambda functions will have what they need.
 
 ## Credits
 
