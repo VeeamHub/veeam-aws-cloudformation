@@ -66,8 +66,8 @@ In an organization member account, the [Veeam AWS Org Roles template](https://ve
 
 1) Login to the AWS account which will serve as the backup account.
 1) Navigate to the CloudFormation service.
-1) On the left column, select Stacks.
-1) In the upper right corner, select the "Create stack" dropdown, then choose "With new resources (standard)".
+1) On the left column, select **Stacks**.
+1) In the upper right corner, select the **Create stack** dropdown, then choose **With new resources (standard)**.
 1) In the **Amazon S3 URL**, paste the following template URL: <https://veeamhub-public.s3.amazonaws.com/veeam-aws-cloudformation/veeam-backup-aws/aws-org-roles/veeam-aws-org-lambdas.template>
 1) Click **Next**.
 1) Enter a name for the stack, e.g., _veeam-aws-org-lambda_
@@ -88,7 +88,7 @@ In an organization member account, the [Veeam AWS Org Roles template](https://ve
 
 1) Select the _Resources_ tab on the Lambda functions stack and click the _Physical ID_ link for the **VeeamSecret** resource. You can also navigate to the [AWS Secrets Manager](https://console.aws.amazon.com/secretsmanager/) console and select the secret named _veeam-backup-aws-credentials_.
 1) In the **Secret value** section, click **Retrieve secret value**. Copy the generated credentials to your clipboard or notepad.
-1) Follow the instructions in the Veeam Backup for AWS user guide to [create a user account](https://helpcenter.veeam.com/docs/vbaws/guide/accounts_vba_users_create.html) with [Portal Administrator](https://helpcenter.veeam.com/docs/vbaws/guide/accounts_vba_users.html) rights using the generated credentials. These credentials will be used by the Lambda configurator function to authenticate with the Veeam Backup for AWS appliance.
+1) Follow the instructions in the Veeam Backup for AWS user guide to [create a user account](https://helpcenter.veeam.com/docs/vbaws/guide/accounts_vba_users_create.html) with [Portal Administrator](https://helpcenter.veeam.com/docs/vbaws/guide/accounts_vba_users.html) rights using the generated credentials. These credentials will be used by the Lambda configurator function to authenticate with the Veeam Backup for AWS console.
 1) In the backup account, navigate to the EC2 service console and select your Veeam Backup for AWS instance.
 1) With your Veeam instance selected, in the bottom window, select the _Security_ tab, then click the **IAM Role** link for the role attached to your instance. You will be taken to the role details in the IAM console.
 1) On the _Summary_ page for the role attached to your Veeam instance, **copy the ARN of the role** to your clipboard or notepad. You will need this value in addition to the Lambda ARN values copied from an earlier step to deploy the StackSet in the next section.
@@ -124,14 +124,14 @@ The StackSet will be created and any accounts belonging to your StackSet deploym
 
 ## Notes
 
-Please feel free to customize to your specific use case. In this example, we are only deploying IAM roles and policies to protect EC2 resources. You can add other roles and policies to the StackSet template to protect other supported resources. For a list of supported resources, visit the [user guide](https://helpcenter.veeam.com/docs/vbaws/guide/welcome.html).
+Please feel free to customize to your specific use case. In this example, we are only deploying IAM roles and policies to protect EC2 resources. You can add other roles and policies to the StackSet template to protect other supported resources. For a list of supported resources and required permissions, visit the [user guide](https://helpcenter.veeam.com/docs/vbaws/guide/welcome.html).
 
 For each role that you deploy to your organization, you must create two custom resources:
 
 1) **Custom::RandomExtIdGenerator** resource - Invokes the _RandomExtIdLambda_ function to create a unique external ID for a role created in the member account
 1) **Custom::VeeamAwsConfigurator** resource - Invokes the _VeeamConfiguratorLambda_ function to add the account to the Veeam Backup for AWS console
 
-The **Custom::VeeamAwsConfigurator** resource sends required details to the Lambda function to process the new role. Be sure to include these properties if you use this custom resource.
+The **Custom::VeeamAwsConfigurator** resource includes properties that give the Lambda function the data it needs to process them. If you create other roles and wish to have them added to the Veeam Backup for AWS console, be sure to include the properties specified in the _veeam-aws-org-roles_ template on the custom resources so the Lambda functions will have what they need.
 
 ## Credits
 
