@@ -1,0 +1,459 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Veeam Backup for AWS - IAM roles",
+    "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Label": {
+                        "default": "Veeam instance role ARN"
+                    },
+                    "Parameters": [
+                        "VeeamInstanceRoleArn"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Lambda ARNs"
+                    },
+                    "Parameters": [
+                        "VeeamAccountantLambdaArn",
+                        "RandomExtIdLambdaArn"
+                    ]
+                }
+            ],
+            "ParameterLabels": {
+                "VeeamInstanceRoleArn": {
+                    "default": "ARN of Veeam instance role"
+                },
+                "VeeamAccountantLambdaArn": {
+                    "default": "ARN of the Veeam configurator function in the backup account"
+                },
+                "RandomExtIdLambdaArn": {
+                    "default": "ARN of the random external ID generator function in the backup account"
+                }
+            }
+        }
+    },
+    "Parameters": {
+        "VeeamInstanceRoleArn": {
+            "Description": "ARN of the IAM role that is attached to the Veeam Backup for AWS EC2 instance.",
+            "Type": "String"
+        },
+        "VeeamAccountantLambdaArn": {
+            "Description": "ARN of the Lambda function which configures AWS accounts on the Veeam Backup for AWS appliance.",
+            "Type": "String"
+        },
+        "RandomExtIdLambdaArn": {
+            "Description": "ARN of the Lambda function which generates randomized external IDs for IAM roles.",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "RandomExtIdGeneratorEc2Role": {
+            "Type": "Custom::RandomExtIdGenerator",
+            "Properties": {
+                "ServiceToken": {
+                    "Ref": "RandomExtIdLambdaArn"
+                },
+                "Length": 12
+            }
+        },
+        "VeeamEc2Role": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": {
+                                    "Ref": "VeeamInstanceRoleArn"
+                                }
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ],
+                            "Condition": {
+                                "StringEquals": {
+                                    "sts:ExternalId": {
+                                        "Fn::GetAtt": [
+                                            "RandomExtIdGeneratorEc2Role",
+                                            "RandomExtId"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                },
+                "Path": "/"
+            }
+        },
+        "VeeamEc2BackupPolicy": {
+            "Type": "AWS::IAM::ManagedPolicy",
+            "Properties": {
+                "Description": "Veeam Backup for AWS - EC2 Backup Policy",
+                "Path": "/",
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Action": [
+                                "ebs:ListChangedBlocks",
+                                "ebs:ListSnapshotBlocks",
+                                "ec2:CopySnapshot",
+                                "ec2:CreateSnapshot",
+                                "ec2:CreateSnapshots",
+                                "ec2:CreateTags",
+                                "ec2:DeleteSnapshot",
+                                "ec2:DeleteTags",
+                                "ec2:DescribeAddresses",
+                                "ec2:DescribeAvailabilityZones",
+                                "ec2:DescribeConversionTasks",
+                                "ec2:DescribeImages",
+                                "ec2:DescribeInstanceAttribute",
+                                "ec2:DescribeInstances",
+                                "ec2:DescribeInstanceTypes",
+                                "ec2:DescribeNetworkInterfaces",
+                                "ec2:DescribeRegions",
+                                "ec2:DescribeSnapshotAttribute",
+                                "ec2:DescribeSnapshots",
+                                "ec2:DescribeSubnets",
+                                "ec2:DescribeTags",
+                                "ec2:DescribeVolumeAttribute",
+                                "ec2:DescribeVolumes",
+                                "ec2:GetEbsDefaultKmsKeyId",
+                                "ec2:ModifySnapshotAttribute",
+                                "events:DeleteRule",
+                                "events:DescribeRule",
+                                "events:ListTargetsByRule",
+                                "events:PutRule",
+                                "events:PutTargets",
+                                "events:RemoveTargets",
+                                "iam:GetContextKeysForPrincipalPolicy",
+                                "iam:ListAccountAliases",
+                                "iam:ListInstanceProfiles",
+                                "iam:SimulatePrincipalPolicy",
+                                "kms:CreateGrant",
+                                "kms:DescribeKey",
+                                "kms:GetKeyPolicy",
+                                "kms:ListAliases",
+                                "kms:ListKeys",
+                                "kms:ReEncryptFrom",
+                                "kms:ReEncryptTo",
+                                "servicequotas:ListServiceQuotas",
+                                "sns:CreateTopic",
+                                "sns:DeleteTopic",
+                                "sns:ListSubscriptionsByTopic",
+                                "sns:ListTopics",
+                                "sns:SetTopicAttributes",
+                                "sns:Subscribe",
+                                "sns:Unsubscribe",
+                                "sqs:CreateQueue",
+                                "sqs:DeleteMessage",
+                                "sqs:DeleteQueue",
+                                "sqs:ListQueues",
+                                "sqs:ReceiveMessage",
+                                "sqs:SetQueueAttributes",
+                                "ssm:DescribeInstanceInformation",
+                                "ssm:GetCommandInvocation",
+                                "ssm:SendCommand"
+                            ],
+                            "Resource": "*",
+                            "Effect": "Allow"
+                        }
+                    ]
+                },
+                "Roles": [
+                    {
+                        "Ref": "VeeamEc2Role"
+                    }
+                ]
+            }
+        },
+        "VeeamEc2RestorePolicy": {
+            "Type": "AWS::IAM::ManagedPolicy",
+            "Properties": {
+                "Description": "Veeam Backup for AWS - EC2 Restore Policy",
+                "Path": "/",
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Action": [
+                                "ec2:AllocateAddress",
+                                "ec2:AssignPrivateIpAddresses",
+                                "ec2:AssociateAddress",
+                                "ec2:AttachNetworkInterface",
+                                "ec2:AttachVolume",
+                                "ec2:CopySnapshot",
+                                "ec2:CreateKeyPair",
+                                "ec2:CreateNetworkInterface",
+                                "ec2:CreateTags",
+                                "ec2:CreateVolume",
+                                "ec2:DeleteKeyPair",
+                                "ec2:DeleteNetworkInterface",
+                                "ec2:DeleteSnapshot",
+                                "ec2:DeleteTags",
+                                "ec2:DeleteVolume",
+                                "ec2:DeregisterImage",
+                                "ec2:DescribeAccountAttributes",
+                                "ec2:DescribeAddresses",
+                                "ec2:DescribeAvailabilityZones",
+                                "ec2:DescribeImages",
+                                "ec2:DescribeInstanceAttribute",
+                                "ec2:DescribeInstances",
+                                "ec2:DescribeInstanceStatus",
+                                "ec2:DescribeKeyPairs",
+                                "ec2:DescribeNetworkInterfaces",
+                                "ec2:DescribeRegions",
+                                "ec2:DescribeRouteTables",
+                                "ec2:DescribeSecurityGroups",
+                                "ec2:DescribeSnapshots",
+                                "ec2:DescribeSubnets",
+                                "ec2:DescribeTags",
+                                "ec2:DescribeVolumes",
+                                "ec2:DescribeVpcEndpoints",
+                                "ec2:DescribeVpcs",
+                                "ec2:DetachVolume",
+                                "ec2:DisassociateAddress",
+                                "ec2:GetEbsDefaultKmsKeyId",
+                                "ec2:ImportImage",
+                                "ec2:ModifyInstanceAttribute",
+                                "ec2:ModifyNetworkInterfaceAttribute",
+                                "ec2:ModifySnapshotAttribute",
+                                "ec2:ModifyVolume",
+                                "ec2:RunInstances",
+                                "ec2:StartInstances",
+                                "ec2:StopInstances",
+                                "ec2:TerminateInstances",
+                                "events:DeleteRule",
+                                "events:DescribeRule",
+                                "events:ListTargetsByRule",
+                                "events:PutRule",
+                                "events:PutTargets",
+                                "events:RemoveTargets",
+                                "iam:AddRoleToInstanceProfile",
+                                "iam:AttachRolePolicy",
+                                "iam:CreateInstanceProfile",
+                                "iam:DeleteInstanceProfile",
+                                "iam:DeleteRolePolicy",
+                                "iam:DetachRolePolicy",
+                                "iam:GetContextKeysForPrincipalPolicy",
+                                "iam:GetInstanceProfile",
+                                "iam:GetRole",
+                                "iam:ListAccountAliases",
+                                "iam:ListAttachedRolePolicies",
+                                "iam:ListInstanceProfilesForRole",
+                                "iam:ListRolePolicies",
+                                "iam:PassRole",
+                                "iam:PutRolePolicy",
+                                "iam:RemoveRoleFromInstanceProfile",
+                                "iam:SimulatePrincipalPolicy",
+                                "kms:CreateGrant",
+                                "kms:DescribeKey",
+                                "kms:GetKeyPolicy",
+                                "kms:ListAliases",
+                                "kms:ListKeys",
+                                "kms:ReEncryptFrom",
+                                "kms:ReEncryptTo",
+                                "s3:GetBucketLocation",
+                                "servicequotas:ListServiceQuotas"
+                            ],
+                            "Resource": "*",
+                            "Effect": "Allow"
+                        }
+                    ]
+                },
+                "Roles": [
+                    {
+                        "Ref": "VeeamEc2Role"
+                    }
+                ]
+            }
+        },
+        "RandomExtIdGeneratorWorkerRole": {
+            "Type": "Custom::RandomExtIdGenerator",
+            "Properties": {
+                "ServiceToken": {
+                    "Ref": "RandomExtIdLambdaArn"
+                },
+                "Length": 12
+            }
+        },
+        "VeeamWorkerRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": {
+                                    "Ref": "VeeamInstanceRoleArn"
+                                }
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ],
+                            "Condition": {
+                                "StringEquals": {
+                                    "sts:ExternalId": {
+                                        "Fn::GetAtt": [
+                                            "RandomExtIdGeneratorWorkerRole",
+                                            "RandomExtId"
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "ec2.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "Path": "/"
+            }
+        },
+        "VeeamWorkerConfigPolicy": {
+            "Type": "AWS::IAM::ManagedPolicy",
+            "Properties": {
+                "Description": "Veeam Backup for AWS - Worker Config Policy",
+                "Path": "/",
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Action": [
+                                "ec2:DescribeAvailabilityZones",
+                                "ec2:DescribeVpcs",
+                                "ec2:DescribeRegions",
+                                "ec2:DescribeAccountAttributes",
+                                "ec2:DescribeSubnets",
+                                "ec2:DescribeSecurityGroups",
+                                "iam:ListAccountAliases"
+                            ],
+                            "Resource": "*",
+                            "Effect": "Allow"
+                        }
+                    ]
+                },
+                "Roles": [
+                    {
+                        "Ref": "VeeamWorkerRole"
+                    }
+                ]
+            }
+        },
+        "VeeamWorkerServicePolicy": {
+            "Type": "AWS::IAM::ManagedPolicy",
+            "Properties": {
+                "Description": "Veeam Backup for AWS - Worker Service Policy",
+                "Path": "/",
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Action": [
+                                "ec2messages:AcknowledgeMessage",
+                                "ec2messages:DeleteMessage",
+                                "ec2messages:FailMessage",
+                                "ec2messages:GetEndpoint",
+                                "ec2messages:GetMessages",
+                                "ec2messages:SendReply",
+                                "sqs:DeleteMessage",
+                                "sqs:ListQueues",
+                                "sqs:ReceiveMessage",
+                                "sqs:SendMessage",
+                                "ssm:DescribeAssociation",
+                                "ssm:DescribeDocument",
+                                "ssm:GetDeployablePatchSnapshotForInstance",
+                                "ssm:GetDocument",
+                                "ssm:GetManifest",
+                                "ssm:GetParameter",
+                                "ssm:GetParameters",
+                                "ssm:ListAssociations",
+                                "ssm:ListInstanceAssociations",
+                                "ssm:PutComplianceItems",
+                                "ssm:PutConfigurePackageResult",
+                                "ssm:PutInventory",
+                                "ssm:UpdateAssociationStatus",
+                                "ssm:UpdateInstanceAssociationStatus",
+                                "ssm:UpdateInstanceInformation",
+                                "ssmmessages:CreateControlChannel",
+                                "ssmmessages:CreateDataChannel",
+                                "ssmmessages:OpenControlChannel",
+                                "ssmmessages:OpenDataChannel"
+                            ],
+                            "Resource": "*",
+                            "Effect": "Allow"
+                        }
+                    ]
+                },
+                "Roles": [
+                    {
+                        "Ref": "VeeamWorkerRole"
+                    }
+                ]
+            }
+        },
+        "VeeamWorkerInstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "Path": "/",
+                "Roles": [
+                    {
+                        "Ref": "VeeamWorkerRole"
+                    }
+                ]
+            }
+        },
+        "VeeamAwsConfiguratorEc2Role": {
+            "Type": "Custom::VeeamAwsConfigurator",
+            "Properties": {
+                "ServiceToken": {
+                    "Ref": "VeeamAccountantLambdaArn"
+                },
+                "MemberAccountId": {
+                    "Ref": "AWS::AccountId"
+                },
+                "RoleName": {
+                    "Ref": "VeeamEc2Role"
+                },
+                "RoleExtId": {
+                    "Fn::GetAtt": [
+                        "RandomExtIdGeneratorEc2Role",
+                        "RandomExtId"
+                    ]
+                },
+                "Purpose": "ec2"
+            }
+        },
+        "VeeamAwsConfiguratorWorkerRole": {
+            "Type": "Custom::VeeamAwsConfigurator",
+            "Properties": {
+                "ServiceToken": {
+                    "Ref": "VeeamAccountantLambdaArn"
+                },
+                "MemberAccountId": {
+                    "Ref": "AWS::AccountId"
+                },
+                "RoleName": {
+                    "Ref": "VeeamWorkerRole"
+                },
+                "RoleExtId": {
+                    "Fn::GetAtt": [
+                        "RandomExtIdGeneratorWorkerRole",
+                        "RandomExtId"
+                    ]
+                },
+                "Purpose": "worker"
+            }
+        }
+    }
+}

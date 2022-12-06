@@ -1,0 +1,572 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Veeam Backup for AWS - Lambda configuration functions",
+    "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Label": {
+                        "default": "AWS Configuration"
+                    },
+                    "Parameters": [
+                        "AwsOrgId",
+                        "VeeamConfiguratorLambdaVpcId",
+                        "VeeamConfiguratorLambdaSubnetId",
+                        "VeeamConfiguratorLambdaSecurityGroupId"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Veeam Configuration"
+                    },
+                    "Parameters": [
+                        "VeeamInstanceIp"
+                    ]
+                }
+            ],
+            "ParameterLabels": {
+                "AwsOrgId": {
+                    "default": "AWS Organization ID"
+                },
+                "VeeamConfiguratorLambdaVpcId": {
+                    "default": "VPC ID"
+                },
+                "VeeamConfiguratorLambdaSubnetId": {
+                    "default": "Subnet ID"
+                },
+                "VeeamConfiguratorLambdaSecurityGroupId": {
+                    "default": "Security group ID"
+                },
+                "VeeamInstanceIp": {
+                    "default": "Veeam instance IP"
+                }
+            }
+        }
+    },
+    "Parameters": {
+        "AwsOrgId": {
+            "Description": "Organization ID that will be allowed to invoke the functions.",
+            "Type": "String"
+        },
+        "VeeamConfiguratorLambdaVpcId": {
+            "Description": "VPC where the Veeam configurator function will be connected.",
+            "Type": "String"
+        },
+        "VeeamConfiguratorLambdaSubnetId": {
+            "Description": "Subnet where the Veeam configurator function will be attached in your VPC.",
+            "Type": "String"
+        },
+        "VeeamConfiguratorLambdaSecurityGroupId": {
+            "Description": "Security group that will be used for connectivity with the AWS Secrets Manager service in your VPC. The security group must allow https (tcp/443) from the subnet where the Lambda will be attached.",
+            "Type": "String"
+        },
+        "VeeamInstanceIp": {
+            "Description": "Private IP address of the Veeam Backup for AWS instance.",
+            "Type": "String"
+        }
+    },
+    "Mappings": {
+        "AwsSecretsLambdaExtRegionMap": {
+            "us-east-1": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:us-east-1:177933569100:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "us-gov-east-1": {
+                "AwsSecretsLambdaExtArn": "arn:aws-us-gov:lambda:us-gov-east-1:129776340158:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "us-gov-west-1": {
+                "AwsSecretsLambdaExtArn": "arn:aws-us-gov:lambda:us-gov-west-1:127562683043:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "us-east-2": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:us-east-2:590474943231:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "us-west-1": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:us-west-1:997803712105:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "us-west-2": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:us-west-2:345057560386:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "ca-central-1": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:ca-central-1:200266452380:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "eu-central-1": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:eu-central-1:187925254637:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "eu-west-1": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:eu-west-1:015030872274:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "eu-west-2": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:eu-west-2:133256977650:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "eu-west-3": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:eu-west-3:780235371811:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "eu-north-1": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:eu-north-1:427196147048:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "eu-south-1": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:eu-south-1:325218067255:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "ap-southeast-1": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:ap-southeast-1:044395824272:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "ap-southeast-2": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:ap-southeast-2:665172237481:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "ap-southeast-3": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:ap-southeast-3:490737872127:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "ap-south-1": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:ap-south-1:176022468876:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "ap-northeast-1": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:ap-northeast-1:133490724326:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "ap-northeast-2": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:ap-northeast-2:738900069198:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "ap-northeast-3": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:ap-northeast-3:576959938190:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "ap-east-1": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:ap-east-1:768336418462:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "sa-east-1": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:sa-east-1:933737806257:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "me-central-1": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:me-central-1:858974508948:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "me-south-1": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:me-south-1:832021897121:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            },
+            "af-south-1": {
+                "AwsSecretsLambdaExtArn": "arn:aws:lambda:af-south-1:317013901791:layer:AWS-Parameters-and-Secrets-Lambda-Extension:2"
+            }
+        }
+    },
+    "Resources": {
+        "VeeamSecret": {
+            "Type": "AWS::SecretsManager::Secret",
+            "UpdateReplacePolicy": "Delete",
+            "DeletionPolicy": "Delete",
+            "Properties": {
+                "Description": "Generated credentials for Veeam Backup for AWS",
+                "Name": "veeam-backup-aws-credentials",
+                "GenerateSecretString": {
+                    "SecretStringTemplate": "{\"username\": \"veeam-aws-secrets-manager\"}",
+                    "GenerateStringKey": "password"
+                }
+            }
+        },
+        "VeeamConfiguratorLambdaRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "lambda.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyName": "VeeamConfiguratorLambdaPolicy",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "logs:CreateLogGroup",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents",
+                                        "ec2:CreateNetworkInterface",
+                                        "ec2:DescribeNetworkInterfaces",
+                                        "ec2:DeleteNetworkInterface",
+                                        "ec2:AssignPrivateIpAddresses",
+                                        "ec2:UnassignPrivateIpAddresses"
+                                    ],
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "secretsmanager:GetSecretValue"
+                                    ],
+                                    "Resource": {
+                                        "Ref": "VeeamSecret"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "VeeamConfiguratorLambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Environment": {
+                    "Variables": {
+                        "VEEAM_INSTANCE_IP": {
+                            "Ref": "VeeamInstanceIp"
+                        },
+                        "SECRET_NAME": {
+                            "Ref": "VeeamSecret"
+                        }
+                    }
+                },
+                "Code": {
+                    "ZipFile": {
+                        "Fn::Join": [
+                            "\n",
+                            [
+                                "import cfnresponse",
+                                "import json",
+                                "import os",
+                                "import urllib3",
+                                "",
+                                "def lambda_handler(event, context):",
+                                "    print('Received event: %s' % json.dumps(event))",
+                                "",
+                                "    status = cfnresponse.SUCCESS",
+                                "    response = {}",
+                                "",
+                                "    # Pull values from the event",
+                                "    accountId = event['ResourceProperties']['MemberAccountId']",
+                                "    roleName = event['ResourceProperties']['RoleName']",
+                                "    roleExtId = event['ResourceProperties']['RoleExtId']",
+                                "    purpose = event['ResourceProperties']['Purpose']",
+                                "",
+                                "    # Check for Delete event and send success to CloudFormation if so.",
+                                "    # This function does not support changing or removing roles within Veeam Backup for AWS.",
+                                "    if event['RequestType'] == 'Delete':",
+                                "        info = 'IAM Role ' + roleName + ' from account ' + accountId + ' used for ' + purpose + ' operations has been deleted. Update your Veeam Backup for AWS configuration, if necessary. Sent success signal.'",
+                                "        print(info)",
+                                "        return cfnresponse.send(event, context, status, response)",
+                                "",
+                                "    http = urllib3.PoolManager(cert_reqs='CERT_NONE')",
+                                "",
+                                "    # Get credentials for the Veeam appliance from AWS Secrets Manager",
+                                "    secrets_name = os.environ.get('SECRET_NAME')",
+                                "    secrets_extension_endpoint = 'http://localhost:2773/secretsmanager/get?secretId=' + secrets_name",
+                                "    secrets_headers = {'X-Aws-Parameters-Secrets-Token': os.environ.get('AWS_SESSION_TOKEN')}",
+                                "",
+                                "    try:",
+                                "        secrets_response = http.request('GET', secrets_extension_endpoint, headers = secrets_headers)",
+                                "    except urllib3.exceptions.RequestError as err:",
+                                "        print('There was an error making the request to AWS Secrets Manager: %s' % err)",
+                                "        status = cfnresponse.FAILED",
+                                "        return cfnresponse.send(event, context, status, response)",
+                                "    except urllib3.exceptions.ConnectionError as err:",
+                                "        print('There was an error connecting to AWS Secrets Manager: %s' % err)",
+                                "        status = cfnresponse.FAILED",
+                                "        return cfnresponse.send(event, context, status, response)",
+                                "",
+                                "    if secrets_response.status != 200:",
+                                "        print('Error retrieving the secret. Check permissions and the secret.')",
+                                "        status = cfnresponse.FAILED",
+                                "        cfnresponse.send(event, context, status, response)",
+                                "",
+                                "    try:",
+                                "        secret = json.loads(secrets_response.data.decode('utf-8'))['SecretString']",
+                                "    except KeyError as err:",
+                                "        print('No secret string found in the response from AWS Secrets Manager. Check your secret. Error: %s' % err)",
+                                "        status = cfnresponse.FAILED",
+                                "        return cfnresponse.send(event, context, status, response)",
+                                "",
+                                "    # Authenticate with the Veeam appliance",
+                                "    veeam_ip = os.environ.get('VEEAM_INSTANCE_IP')",
+                                "    veeam_api_endpoint = 'https://' + veeam_ip + ':11005/api/v1/'",
+                                "    veeam_auth_endpoint = veeam_api_endpoint + 'token'",
+                                "    veeam_auth_headers = {'x-api-version': '1.3-rev0','Content-Type': 'application/x-www-form-urlencoded','Accept': 'application/json'}",
+                                "",
+                                "    try:",
+                                "        veeam_username = json.loads(secret)['username']",
+                                "    except KeyError as err:",
+                                "        print('No username found in your secret. Check your secret. Error: %s' % err)",
+                                "        status = cfnresponse.FAILED",
+                                "        return cfnresponse.send(event, context, status, response)",
+                                "",
+                                "    try:",
+                                "        veeam_password = json.loads(secret)['password']",
+                                "    except KeyError as err:",
+                                "        print('No password found in your secret. Check your secret. Error: %s' % err)",
+                                "        status = cfnresponse.FAILED",
+                                "        return cfnresponse.send(event, context, status, response)",
+                                "",
+                                "    veeam_auth_payload = {'grant_type': 'password', 'username': veeam_username, 'password': veeam_password}",
+                                "",
+                                "    try:",
+                                "        veeam_auth_response = http.request_encode_body('POST', veeam_auth_endpoint, fields = veeam_auth_payload, headers = veeam_auth_headers, encode_multipart=False)",
+                                "    except urllib3.exceptions.RequestError as err:",
+                                "        print('Error making the auth request to Veeam Backup for AWS. Error: %s' % err)",
+                                "        status = cfnresponse.FAILED",
+                                "        return cfnresponse.send(event, context, status, response)",
+                                "    except urllib3.exceptions.ConnectionError as err:",
+                                "        print('Error connecting to Veeam Backup for AWS. Error: %s' % err)",
+                                "        status = cfnresponse.FAILED",
+                                "        return cfnresponse.send(event, context, status, response)",
+                                "",
+                                "    if veeam_auth_response.status != 200:",
+                                "        print('Error authenticating with Veeam appliance. Check your secret and credentials on the appliance.')",
+                                "        status = cfnresponse.FAILED",
+                                "        return cfnresponse.send(event, context, status, response)",
+                                "",
+                                "    try:",
+                                "        veeam_access_token = json.loads(veeam_auth_response.data.decode('utf-8'))['access_token']",
+                                "    except KeyError as err:",
+                                "        print('No access token was found in the response. Check your username and password for the appliance. Error: %s' % err)",
+                                "        status = cfnresponse.FAILED",
+                                "        return cfnresponse.send(event, context, status, response)",
+                                "",
+                                "    veeam_token = 'Bearer ' + veeam_access_token",
+                                "",
+                                "    # Add the account to the Veeam appliance",
+                                "    if event['RequestType'] == 'Create':",
+                                "        veeam_account_endpoint = veeam_api_endpoint + 'accounts/amazon'",
+                                "        account_purpose = accountId + '-' + purpose",
+                                "        veeam_account_payload = json.dumps({'name': account_purpose,'IAMRoleFromAnotherAccount': {'accountId': accountId,'roleName': roleName,'externalId': roleExtId}})",
+                                "        veeam_account_headers = {'x-api-version': '1.3-rev0','Content-Type': 'application/json','Accept': 'application/json','Authorization': veeam_token}",
+                                "",
+                                "        try:",
+                                "            veeam_account_response = http.request('POST', veeam_account_endpoint, body = veeam_account_payload, headers = veeam_account_headers)",
+                                "        except urllib3.exceptions.RequestError as err:",
+                                "            print('Error making the account request to Veeam Backup for AWS. Error: %s' % err)",
+                                "            status = cfnresponse.FAILED",
+                                "            return cfnresponse.send(event, context, status, response)",
+                                "        except urllib3.exceptions.ConnectionError as err:",
+                                "            print('Error connecting to Veeam Backup for AWS. Error: %s' % err)",
+                                "            status = cfnresponse.FAILED",
+                                "            return cfnresponse.send(event, context, status, response)",
+                                "",
+                                "        if veeam_account_response.status != 201:",
+                                "            print('Error occurred and the account was not added. Check your configuration.')",
+                                "            status = cfnresponse.FAILED",
+                                "            return cfnresponse.send(event, context, status, response)",
+                                "",
+                                "        return cfnresponse.send(event, context, status, response)",
+                                "",
+                                "    else:",
+                                "        info = 'Unsupported stack event. Sent success signal.'",
+                                "        print(info)",
+                                "        return cfnresponse.send(event, context, status, response)"
+                            ]
+                        ]
+                    }
+                },
+                "Layers": [
+                    {
+                        "Fn::FindInMap": [
+                            "AwsSecretsLambdaExtRegionMap",
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            "AwsSecretsLambdaExtArn"
+                        ]
+                    }
+                ],
+                "Description": "Lambda function which configures AWS accounts on the Veeam Backup for AWS appliance",
+                "Handler": "index.lambda_handler",
+                "Role": {
+                    "Fn::GetAtt": [
+                        "VeeamConfiguratorLambdaRole",
+                        "Arn"
+                    ]
+                },
+                "Runtime": "python3.9",
+                "Timeout": 300,
+                "VpcConfig": {
+                    "SubnetIds": [
+                        {
+                            "Ref": "VeeamConfiguratorLambdaSubnetId"
+                        }
+                    ],
+                    "SecurityGroupIds": [
+                        {
+                            "Ref": "VeeamConfiguratorLambdaSecurityGroupId"
+                        }
+                    ]
+                }
+            }
+        },
+        "VeeamConfiguratorLambdaPermission": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+                "Action": "lambda:InvokeFunction",
+                "FunctionName": {
+                    "Ref": "VeeamConfiguratorLambda"
+                },
+                "Principal": "*",
+                "PrincipalOrgID": {
+                    "Ref": "AwsOrgId"
+                }
+            }
+        },
+        "AwsSecretsVpcEndpoint": {
+            "Type": "AWS::EC2::VPCEndpoint",
+            "Properties": {
+                "ServiceName": {
+                    "Fn::Sub": "com.amazonaws.${AWS::Region}.secretsmanager"
+                },
+                "VpcEndpointType": "Interface",
+                "PrivateDnsEnabled": true,
+                "VpcId": {
+                    "Ref": "VeeamConfiguratorLambdaVpcId"
+                },
+                "SubnetIds": [
+                    {
+                        "Ref": "VeeamConfiguratorLambdaSubnetId"
+                    }
+                ],
+                "SecurityGroupIds": [
+                    {
+                        "Ref": "VeeamConfiguratorLambdaSecurityGroupId"
+                    }
+                ]
+            }
+        },
+        "RandomExtIdLambdaRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "lambda.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyName": "RandomExtIdLambdaPolicy",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "logs:CreateLogGroup",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents"
+                                    ],
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "RandomExtIdLambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Code": {
+                    "ZipFile": {
+                        "Fn::Join": [
+                            "\n",
+                            [
+                                "import cfnresponse",
+                                "import json",
+                                "import random",
+                                "import string",
+                                "",
+                                "def lambda_handler(event, context):",
+                                "    print('Received event: %s' % json.dumps(event))",
+                                "",
+                                "    status = cfnresponse.SUCCESS",
+                                "    response = {}",
+                                "",
+                                "    try:",
+                                "        length = int(event['ResourceProperties']['Length'])",
+                                "",
+                                "        if length < 2 or length > 1224:",
+                                "            status = cfnresponse.FAILED",
+                                "            return cfnresponse.send(event, context, status, response, reason='Length must be an integer between 2 and 1224')",
+                                "",
+                                "    except KeyError:",
+                                "        status = cfnresponse.FAILED",
+                                "        return cfnresponse.send(event, context, status, response, reason='Length must be specified')",
+                                "",
+                                "    except:",
+                                "        status = cfnresponse.FAILED",
+                                "        return cfnresponse.send(event, context, status, response, reason='Length must be an integer')",
+                                "",
+                                "    if event['RequestType'] == 'Create':",
+                                "        characters = string.ascii_letters + string.digits",
+                                "        random_extid = ''.join(random.choices(characters, k=length))",
+                                "        response = {'RandomExtId': random_extid}",
+                                "        return cfnresponse.send(event, context, status, response)",
+                                "",
+                                "    else:",
+                                "        return cfnresponse.send(event, context, status, response)"
+                            ]
+                        ]
+                    }
+                },
+                "Description": "Lambda function which generates randomized external IDs for IAM roles",
+                "Handler": "index.lambda_handler",
+                "Role": {
+                    "Fn::GetAtt": [
+                        "RandomExtIdLambdaRole",
+                        "Arn"
+                    ]
+                },
+                "Runtime": "python3.9",
+                "Timeout": 300
+            }
+        },
+        "RandomExtIdLambdaPermission": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+                "Action": "lambda:InvokeFunction",
+                "FunctionName": {
+                    "Ref": "RandomExtIdLambda"
+                },
+                "Principal": "*",
+                "PrincipalOrgID": {
+                    "Ref": "AwsOrgId"
+                }
+            }
+        }
+    },
+    "Outputs": {
+        "VeeamConfiguratorLambdaArn": {
+            "Description": "ARN of the Lambda function which configures AWS accounts on the Veeam Backup for AWS appliance",
+            "Value": {
+                "Fn::GetAtt": [
+                    "VeeamConfiguratorLambda",
+                    "Arn"
+                ]
+            }
+        },
+        "RandomExtIdLambdaArn": {
+            "Description": "ARN of the Lambda function which generates randomized external IDs for IAM roles",
+            "Value": {
+                "Fn::GetAtt": [
+                    "RandomExtIdLambda",
+                    "Arn"
+                ]
+            }
+        }
+    }
+}
