@@ -18,6 +18,16 @@ Parameters:
     MaxLength: 64
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9\-]*'
     ConstraintDescription: Refer to AWS IAM documentation for name requirements and character limits. https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-quotas.html
+  OutputCredentialLocation:
+    Default: "CloudFormation"
+    Description: "Location to output the IAM user credentials. Options: CloudFormation, SecretsManager. Additional costs associated with SecretsManager"
+    Type: String
+    AllowedValues:
+      - CloudFormation
+      - SecretsManager
+
+Conditions:
+  UseSecretsManager: !Equals [!Ref OutputCredentialLocation, "SecretsManager"]
 
 Resources:
   VeeamS3Bucket:
@@ -68,15 +78,17 @@ Resources:
 
   # Consider storing the IAM secret key in AWS Secrets Manager for secure storage and access.
   # This option is not enabled by default because secrets stored in AWS Secrets Manager incur a monthly cost. Refer to AWS documentation for details.
-  #
-  # IAMSecretAccessKey:
-  #   Type: AWS::SecretsManager::Secret
-  #   UpdateReplacePolicy: Delete
-  #   DeletionPolicy: Delete
-  #   Properties:
-  #     Name: VeeamS3AccessKey
-  #     Description: Access key used by Veeam to access S3.
-  #     SecretString: !Sub '{"AccessKey":"${IAMAccessKey}","SecretAccessKey":"${IAMAccessKey.SecretAccessKey}"}'
+  # To enable it set the OutputCredentialLocation parameter to "SecretsManager".
+
+  IAMSecretAccessKey:
+    Type: AWS::SecretsManager::Secret
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Condition: UseSecretsManager
+    Properties:
+      Name: VeeamS3AccessKey
+      Description: Access key used by Veeam to access S3.
+      SecretString: !Sub '{"AccessKey":"${IAMAccessKey}","SecretAccessKey":"${IAMAccessKey.SecretAccessKey}"}'
 
 Outputs:
   Region:
@@ -88,12 +100,17 @@ Outputs:
     Description: Veeam S3 IAM user
 
   AccessKey:
-    Value: !Ref IAMAccessKey
+    Value: !If
+      - UseSecretsManager
+      - !Sub "SecretKey stored in AWS Secrets Manager ${IAMSecretAccessKey}"
+      - !Ref IAMAccessKey
     Description: Access key ID of new user
 
-  # Remove the "SecretKey" output if you opt to use AWS Secrets Manager to store the secret key (more secure).
   SecretKey:
-    Value: !GetAtt IAMAccessKey.SecretAccessKey
+    Value: !If
+      - UseSecretsManager
+      - "SecretKey stored in AWS Secrets Manager"
+      - !GetAtt IAMAccessKey.SecretAccessKey
     Description: Secret access key of new user
 
   VeeamS3Bucket:
