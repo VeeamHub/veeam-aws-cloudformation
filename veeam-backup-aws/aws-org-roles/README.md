@@ -1,6 +1,8 @@
 # Auto-Add Accounts in AWS Organizations to Veeam Backup for AWS
 
-This project allows you to automatically add accounts managed by AWS Organizations to Veeam Backup for AWS.
+This project allows you to automatically add accounts managed by AWS Organizations to Veeam Backup for AWS. 
+
+An overview of the solution is described in the blog article on veeam.com: [Managing Backups as Code – Configuring IAM roles in Veeam Backup for AWS with AWS CloudFormation and Lambda](https://www.veeam.com/blog/backups-as-code-iam-roles-veeam-backup-aws-cloudformation-lambda.html)
 
 ## Getting started
 
